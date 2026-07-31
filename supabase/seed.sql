@@ -1,3 +1,13 @@
+-- Helpers de TESTE — aplicados só no banco local.
+--
+-- Estes helpers fabricam usuários em `auth.users` e forçam estado de jogo. Isso
+-- não pode existir em produção, nem com os grants revogados: é superfície que o
+-- jogo não precisa e que um acesso elevado poderia abusar.
+--
+-- Por isso vivem em `seed.sql` e NÃO em `migrations/`: o `db reset` local aplica
+-- migrations + seed (então o pgTAP encontra os helpers), enquanto o `db push`
+-- envia apenas as migrations para o remoto.
+--
 -- Jogo do Impostor — helpers de teste (schema `tests`)
 --
 -- POR QUE ISSO ESTÁ EM UMA MIGRATION E NÃO NO ARQUIVO DE TESTE:
