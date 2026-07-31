@@ -1,0 +1,240 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  /* Acentos da identidade que não têm slot no shadcn. */
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-deep: var(--accent-deep);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ---------------------------------------------------------------------------
+   Identidade visual — herdada do Nutrion (/pessoal/nutrion/app).
+   Preto profundo em camadas, verde neon como ação, violeta como segundo acento,
+   rosa para perigo. O app roda sempre em dark, então :root e .dark são iguais:
+   um sem o outro deixaria a tela branca por um frame se a classe caísse.
+   --------------------------------------------------------------------------- */
+:root,
+.dark {
+  /* O `@theme` acima faz `--font-sans: var(--font-sans)`, e o layout só publica
+     `--font-geist-sans`. Sem esta ponte, `font-sans` não resolve e o navegador
+     cai no serif padrão — que num jogo de festa fica péssimo. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Fundos em camadas, do mais profundo ao mais elevado. */
+  --background: #07080b;
+  --foreground: #f4f5f7;
+  --card: #12141a;
+  --card-foreground: #f4f5f7;
+  --popover: #0f1115;
+  --popover-foreground: #f4f5f7;
+
+  /* Ação: verde neon com texto escuro em cima. */
+  --primary: #39ff14;
+  --primary-foreground: #0a0b0e;
+
+  --secondary: #1a1d25;
+  --secondary-foreground: #f4f5f7;
+
+  --muted: #0b0d12;
+  --muted-foreground: #a1a6b2;
+
+  /* `accent` no shadcn é estado de hover/seleção, não cor de marca. */
+  --accent: #1a1d25;
+  --accent-foreground: #f4f5f7;
+
+  --destructive: #f43f5e;
+  --destructive-foreground: #f4f5f7;
+
+  --border: #1f232b;
+  --input: #2b313c;
+  /* Foco no verde da marca em vez de cinza. */
+  --ring: #39ff14;
+
+  /* Cantos generosos: o app é todo card grande em tela de celular. */
+  --radius: 1rem;
+
+  /* Acentos extras da identidade, usados direto nos componentes. */
+  --violet: #8b5cf6;
+  --violet-soft: #a78bfa;
+  --accent-soft: #7bff5c;
+  --accent-deep: #1db954;
+  --accent-glow: rgb(57 255 20 / 0.25);
+  --warn: #f59e0b;
+  --info: #38bdf8;
+
+  --chart-1: #39ff14;
+  --chart-2: #8b5cf6;
+  --chart-3: #38bdf8;
+  --chart-4: #f59e0b;
+  --chart-5: #f43f5e;
+  --sidebar: #0f1115;
+  --sidebar-foreground: #f4f5f7;
+  --sidebar-primary: #39ff14;
+  --sidebar-primary-foreground: #0a0b0e;
+  --sidebar-accent: #1a1d25;
+  --sidebar-accent-foreground: #f4f5f7;
+  --sidebar-border: #1f232b;
+  --sidebar-ring: #39ff14;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* Gradiente vertical sutil: dá profundidade sem virar "fundo colorido". */
+    background-image: linear-gradient(180deg, #07080b 0%, #0b0d12 50%, #07080b 100%);
+    background-attachment: fixed;
+    /* Rede de segurança: app de celular nunca rola para o lado. `clip` em vez de
+       `hidden` porque `hidden` criaria contexto de scroll e quebraria o
+       `position: sticky` das ações no rodapé. */
+    overflow-x: clip;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+/* ---------------------------------------------------------------------------
+   Jogo do Impostor — utilitários mobile-first
+   O app é jogado em pé, com uma mão, passando o celular de mão em mão.
+   --------------------------------------------------------------------------- */
+
+/* Respeita a barra de gestos / notch. `max()` garante respiro mesmo em aparelho
+   sem inset (Android antigo, navegador desktop). */
+@utility pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@utility pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+/* Área de toque mínima confortável para dedo (não 32px de mouse). */
+@utility touch-target {
+  min-height: 3rem;
+}
+
+@layer base {
+  /* Remove o flash cinza de tap do Android/iOS: o feedback vem das animações. */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Números de código de sala e placar alinhados em colunas. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Brilho (glow) — o traço mais característico da identidade.
+   No Nutrion vem de shadow colorido + lavada de gradiente; aqui é a mesma ideia
+   em CSS puro.
+   --------------------------------------------------------------------------- */
+
+/* Ação primária: parece acesa. */
+@utility glow-primary {
+  box-shadow: 0 8px 24px -6px var(--accent-glow);
+}
+
+@utility glow-violet {
+  box-shadow: 0 0 24px -6px rgb(139 92 246 / 0.45);
+}
+
+@utility glow-danger {
+  box-shadow: 0 0 24px -6px rgb(244 63 94 / 0.45);
+}
+
+/* Lavada diagonal dentro de um card, para ele não parecer chapado. */
+@utility card-wash {
+  background-image: linear-gradient(135deg, rgb(57 255 20 / 0.07), rgb(57 255 20 / 0) 65%);
+}
+
+@utility card-wash-violet {
+  background-image: linear-gradient(135deg, rgb(139 92 246 / 0.13), rgb(139 92 246 / 0) 65%);
+}
+
+@utility card-wash-danger {
+  background-image: linear-gradient(135deg, rgb(244 63 94 / 0.12), rgb(244 63 94 / 0) 65%);
+}
+
+/* Halo radial atrás do herói da tela inicial. */
+@utility hero-radial {
+  position: relative;
+  isolation: isolate;
+  /* O halo é maior que a tela de propósito (para desbotar nas bordas em vez de
+     terminar num círculo visível). `clip` no eixo x impede que esse excesso vire
+     scroll horizontal, deixando o vazamento vertical intacto. */
+  overflow-x: clip;
+
+  &::before {
+    content: '';
+    position: absolute;
+    /* O centro do halo tem que ficar ACIMA do conteúdo, não sobre ele: em cima do
+       card do ícone o brilho apaga a borda e o fundo, e o card desaparece. Isto é
+       luz de ambiente vinda de cima, não holofote. */
+    top: -60%;
+    left: 50%;
+    z-index: -1;
+    width: 30rem;
+    height: 30rem;
+    translate: -50% 0;
+    border-radius: 9999px;
+    background: radial-gradient(
+      circle,
+      rgb(57 255 20 / 0.13) 0%,
+      rgb(29 185 84 / 0.04) 42%,
+      rgb(7 8 11 / 0) 70%
+    );
+    pointer-events: none;
+  }
+}
