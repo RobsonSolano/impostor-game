@@ -6,7 +6,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(8);
+select plan(11);
 
 select is((select count(*)::int from words), 200, 'Seed tem 200 palavras');
 
@@ -55,6 +55,31 @@ select throws_ok(
   '23514',
   null,
   'O banco recusa palavra longa demais'
+);
+
+-- ---------------------------------------------------------------------------
+-- O filtro de vulgaridade não pode punir jogo honesto
+-- ---------------------------------------------------------------------------
+
+select is(
+  (select count(*)::int from words w
+   join profanity_words p on normalize_word(p.word) = normalize_word(w.text)),
+  0,
+  'Nenhuma palavra secreta está na lista de palavrões — senão o jogo recusaria a dica certa'
+);
+
+-- Dicas óbvias de palavras que existem no baralho precisam passar.
+select is(
+  (select count(*)::int from profanity_words
+   where normalize_word(word) in ('pinto', 'teta', 'coco', 'peito', 'matar', 'preto')),
+  0,
+  'Dicas legítimas (pinto/Galinha, teta/Vaca, coco/Praia) não são tratadas como palavrão'
+);
+
+-- E o filtro continua fazendo o trabalho dele.
+select ok(
+  is_profane('caralho') and is_profane('BUCETA') and is_profane('retardado'),
+  'Vulgaridade e xingamento continuam bloqueados'
 );
 
 select * from finish();
