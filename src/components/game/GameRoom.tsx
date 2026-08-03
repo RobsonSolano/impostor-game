@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button'
 import { useAnonSession, useRoomIdFromCode } from '@/hooks/useGameAccess'
 import { useMyCard } from '@/hooks/useMyCard'
 import { useRoomChannel } from '@/hooks/useRoomChannel'
+import { useRoundClues } from '@/hooks/useRoundClues'
 import { LobbyPhase } from '@/components/game/LobbyPhase'
 import { WordRevealPhase } from '@/components/game/WordRevealPhase'
-import { DiscussionPhase } from '@/components/game/DiscussionPhase'
+import { CluePhase } from '@/components/game/CluePhase'
 import { VotingPhase } from '@/components/game/VotingPhase'
 import { LastChancePhase } from '@/components/game/LastChancePhase'
 import { GameOverPhase } from '@/components/game/GameOverPhase'
@@ -40,6 +41,7 @@ export function GameRoom({ code }: { code: string }) {
 
   const me = players.find((player) => player.user_id === userId) ?? null
   const { card } = useMyCard(room?.active_round_id ?? null, me?.id ?? null)
+  const clues = useRoundClues(room?.active_round_id ?? null)
 
   // O host encerrou: todos voltam para a tela inicial. (IMP-25)
   const isClosed = room?.status === 'CLOSED'
@@ -101,7 +103,7 @@ export function GameRoom({ code }: { code: string }) {
         >
           {room.status === 'LOBBY' && <LobbyPhase {...shared} />}
           {room.status === 'WORD_REVEAL' && <WordRevealPhase {...shared} card={card} />}
-          {room.status === 'DISCUSSION' && <DiscussionPhase {...shared} />}
+          {room.status === 'DISCUSSION' && <CluePhase {...shared} clues={clues} />}
           {room.status === 'VOTING' && <VotingPhase {...shared} />}
           {room.status === 'LAST_CHANCE' && <LastChancePhase {...shared} card={card} />}
           {room.status === 'GAME_OVER' && <GameOverPhase {...shared} />}

@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { Hourglass, Loader2 } from 'lucide-react'
 import { PhaseShell } from '@/components/shared/PhaseShell'
 import { PlayerAvatar } from '@/components/shared/PlayerAvatar'
+import { Countdown } from '@/components/shared/Countdown'
 import { expireLastChance, submitGuess } from '@/lib/game/actions'
 import { toDisplayError } from '@/lib/game/errors'
 import type { PhaseProps } from '@/components/game/types'
@@ -15,65 +16,6 @@ import type { PlayerCard } from '@/lib/types'
  * banco (`rooms.guess_deadline`); isto só desenha a contagem.
  */
 const TOTAL_MS = 5_000
-const TICK_MS = 100
-
-/**
- * Contagem regressiva do palpite.
- *
- * Componente separado e com `key` no prazo: o restante inicial vem do
- * inicializador de `useState`, então uma Última Chance nova começa com estado
- * limpo sem precisar de `setState` dentro de efeito.
- *
- * Sobre o relógio do celular: o restante é calculado UMA vez, limitado a 15s, e
- * depois conta para baixo localmente. Reler `deadline - Date.now()` a cada tick
- * deixaria o timer refém de um aparelho com a hora errada — e celular com hora
- * errada não é raro. Quem decide de verdade se o palpite chegou em tempo é a
- * função SQL, não este contador.
- */
-function Countdown({ deadline, onExpire }: { deadline: string | null; onExpire: () => void }) {
-  const [remaining, setRemaining] = useState(() => {
-    const target = deadline ? new Date(deadline).getTime() : 0
-    return Math.min(Math.max(target - Date.now(), 0), TOTAL_MS)
-  })
-
-  // Cadeia de setTimeout em vez de setInterval: o setState fica no callback (não
-  // no corpo do efeito) e a contagem se encerra sozinha ao chegar em zero.
-  useEffect(() => {
-    if (remaining <= 0) return
-    const id = setTimeout(() => setRemaining((prev) => Math.max(prev - TICK_MS, 0)), TICK_MS)
-    return () => clearTimeout(id)
-  }, [remaining])
-
-  const expire = useEffectEvent(() => onExpire())
-
-  useEffect(() => {
-    if (remaining <= 0) expire()
-  }, [remaining])
-
-  const seconds = Math.ceil(remaining / 1000)
-
-  return (
-    <div className="flex w-full flex-col items-center gap-2">
-      <motion.span
-        key={seconds}
-        initial={{ scale: 1.35, opacity: 0.5 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.2 }}
-        className="tabular text-5xl font-black"
-        aria-live="polite"
-      >
-        {seconds}
-      </motion.span>
-      <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
-        <motion.div
-          className="bg-violet h-full origin-left"
-          style={{ scaleX: remaining / TOTAL_MS }}
-          transition={{ ease: 'linear' }}
-        />
-      </div>
-    </div>
-  )
-}
 
 type LastChancePhaseProps = PhaseProps & {
   card: PlayerCard | null
@@ -114,8 +56,15 @@ export function LastChancePhase({ room, players, me, card }: LastChancePhaseProp
     }
   }
 
+  // `key` no prazo: prazo novo precisa de instância nova do contador.
   const countdown = (
-    <Countdown key={room.guess_deadline ?? 'sem-prazo'} deadline={room.guess_deadline} onExpire={handleExpire} />
+    <Countdown
+      key={room.guess_deadline ?? 'sem-prazo'}
+      deadline={room.guess_deadline}
+      totalMs={TOTAL_MS}
+      onExpire={handleExpire}
+      tone="violet"
+    />
   )
 
   if (!amImpostor) {

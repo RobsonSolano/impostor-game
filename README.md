@@ -1,8 +1,8 @@
 # Jogo do Impostor
 
-Jogo de dedução social para jogar **presencialmente**, usando o celular só para o que precisa ser secreto.
+Jogo de dedução social para jogar na mesa ou a distância, usando o celular para o que precisa ser secreto e para dar ritmo às dicas.
 
-Todos na mesa recebem a mesma palavra. Menos um. O impostor não sabe qual é, e tem que blefar a partir das dicas que os outros dão. A conversa acontece na vida real — o app entrega o card secreto, recolhe os votos e conta o resultado.
+Todos recebem a mesma palavra. Menos um. O impostor não sabe qual é, e tem que blefar a partir das dicas que os outros escrevem — sem se entregar.
 
 🎮 **[rsimpostorgame.vercel.app](https://rsimpostorgame.vercel.app)**
 
@@ -10,11 +10,13 @@ Todos na mesa recebem a mesma palavra. Menos um. O impostor não sabe qual é, e
 
 1. Alguém cria a sala e passa o código de 4 letras para a mesa.
 2. Cada um vê seu card secreto — **segurando o dedo na tela por 2 segundos**. Solta, esconde.
-3. Conversem ao vivo, na ordem que quiserem. O app não interrompe, não cronometra e não diz de quem é a vez.
-4. Quando a mesa quiser, o host abre a votação. Empate ou "pular" vencendo? Mais uma rodada de dicas.
+3. O sistema sorteia a ordem, e cada um escreve **uma palavra** relacionada à secreta, com prazo (15s para o primeiro, 20s para os seguintes). A dica aparece para todos.
+4. Terminada a volta, o host escolhe: mais uma rodada de dicas, ou abrir a votação.
 5. Eliminaram um inocente? O impostor ganha. Acertaram o impostor? Ele ainda tem **5 segundos** para adivinhar a palavra entre 4 opções e roubar a vitória.
 
 De 3 a 12 jogadores. Pontuação: verdadeiros +1 cada, impostor descoberto 0, impostor não descoberto +2, roubo na Última Chance +3.
+
+**Serve presencial e remoto com o mesmo fluxo.** Na mesa, a janela até o próximo turno é o tempo de comentar a dica que acabou de aparecer. Numa call ou no Discord, é só o tempo de digitar. O app dá ritmo à dica escrita — nunca à conversa.
 
 ## A regra que sustenta o jogo
 
@@ -49,12 +51,12 @@ O `supabase start` imprime `API_URL` e `ANON_KEY` — são esses valores que vã
 npm run dev           # Next dev (Turbopack)
 npm test              # Vitest: lógica pura e componentes
 npm run verify        # gate completo: tsc + eslint + vitest + build
-npx supabase test db  # pgTAP: as regras do jogo (143 asserções)
+npx supabase test db  # pgTAP: as regras do jogo (196 asserções)
 npx supabase db reset # reaplica migrations + seed
 npm run db:types      # regenera os tipos TypeScript do schema
 ```
 
-As **regras do jogo são testadas em pgTAP**, não em Vitest — elas vivem no banco, então os testes vivem no banco. O Vitest cobre lógica pura (normalização de código de sala) e componente (o hold-to-reveal).
+As **regras do jogo são testadas em pgTAP**, não em Vitest — elas vivem no banco, então os testes vivem no banco. O Vitest cobre lógica pura (código de sala, formato da dica) e componente (o hold-to-reveal e o popup de dica).
 
 ## Deploy
 
@@ -68,8 +70,10 @@ npx supabase config push  # envia a config de auth
 
 `supabase/seed.sql` contém helpers de teste que fabricam usuários — por isso fica fora de `migrations/`: o `db reset` local aplica, o `db push` não envia.
 
-## Duas armadilhas que já custaram tempo
+## Três armadilhas que já custaram tempo
 
 **Login anônimo precisa estar habilitado.** A identidade do jogador é uma sessão anônima e toda RPC começa com `require_uid()`. Com o provider desativado, `signInAnonymously()` volta 422 e ninguém entra em sala. Está versionado em `config.toml` (`enable_anonymous_sign_ins`), então `config push` resolve.
+
+**A palavra secreta não é bloqueada como dica.** Parece um bug ("por que o app deixa alguém entregar a palavra?") e é o oposto: recusar confirmaria ao impostor que ele acertou. O aviso na tela é preventivo. Existe teste guardando essa decisão, justamente para ninguém "corrigir" isso sem perceber o vazamento.
 
 **`rooms.code` tem que ser `text`, nunca `char(4)`.** O decodificador WAL→JSON do Realtime trata `bpchar` como char de 1 caractere e entrega `"code": "F"` no lugar de `"F2VQ"`. A leitura REST vem correta, então criar a sala *parece* funcionar — o código só quebra no primeiro `UPDATE` da sala, que é o próprio `create_room` gravando o host. Existe teste guardando o tipo.

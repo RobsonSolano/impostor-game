@@ -65,6 +65,7 @@ select is(
 );
 
 -- Abrir a votação duas vezes.
+select tests.finish_clue_turns((select id from r));
 select tests.act_as(((select ctx -> 'users' from c) ->> 0)::uuid);
 select open_voting((select id from r));
 select throws_ok(

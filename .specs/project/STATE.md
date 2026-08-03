@@ -16,11 +16,13 @@ Vários celulares agem ao mesmo tempo. Voto simultâneo, dois jogadores tocando 
 
 Alternativa descartada: Route Handlers com service role key — mais latência, mais superfície de erro e ainda precisaria de lock no banco.
 
-### 2026-07-31 — O app não gerencia ordem da mesa (correção de escopo do dev)
+### 2026-07-31 — O app não gerencia ordem da mesa (correção de escopo do dev) — ⚠️ SUPERADA em 2026-08-03
 
 O briefing original dizia "o app gerencia a ordem da mesa (exibe de quem é a vez de falar)". O dev corrigiu: ninguém precisa fazer nada no app durante as dicas. O grupo conversa livremente na vida real e o app só reaparece quando é hora de votar.
 
 Consequência no schema: sem `players.seat_order`, sem `rooms.turn_index`, sem RPC `advance_turn`. As fases `ROUND_1`/`ROUND_2` colapsam em uma única fase `DISCUSSION` com contador `discussion_round` apenas informativo. Elimina a corrida mais chata do projeto (dois jogadores tocando "próximo" simultaneamente) e ~1/3 da superfície de RPC.
+
+**Superada pelos turnos de dicas (2026-08-03):** o app passou a sortear ordem e a ter prazo por turno, e `rooms.clue_turn_index` existe. O que sobreviveu da decisão é o essencial: nada no app pede que alguém *fale*. Ver a decisão de 2026-08-03.
 
 ### 2026-07-31 — Host abre a votação
 
@@ -49,6 +51,16 @@ Ordem no DOM = ordem de leitura no celular (header → palco → mesa → ação
 ### 2026-07-31 — Palavras: uma palavra, para criança de 9 anos
 
 A lista original tinha 42 frases de 200 ("Entrevista de Emprego") e termos abstratos. Frase é ruim duas vezes: já é a própria dica e estoura o card. Regra agora é garantida por `check` em `words` (sem espaço, 3–15 caracteres), não só por convenção — a lista vai crescer.
+
+### 2026-08-03 — Turnos de dicas: um fluxo só, presencial e remoto
+
+A regra 6 dizia que o app não gerencia ordem da mesa. Passou a gerenciar a ordem da **dica escrita** — e a pergunta era se isso exigia dois modos (presencial x remoto). Não exigiu: a janela até o próximo turno é o tempo de conversa na mesa e o tempo de digitar no remoto, então o mesmo fluxo serve os dois. Economizou uma coluna em `rooms`, dois caminhos na máquina de estados e o dobro de casos de teste.
+
+O status continua se chamando `DISCUSSION`: o papel da fase é o mesmo (entre revelar o card e votar) e a conversa continua acontecendo, agora nos intervalos. Renomear o enum só geraria churn.
+
+### 2026-08-03 — Palavrão retorna, não levanta exceção
+
+`submit_clue` devolve `{ ok: false, reason: 'PROFANITY', strikes }` em vez de `raise`. Exceção em plpgsql desfaz a transação inteira — o incremento do contador de faltas voltaria a zero junto, e a terceira falta nunca chegaria. Erros que não gravam nada (fase errada, não é sua vez, formato inválido) continuam levantando exceção.
 
 ## Blockers
 

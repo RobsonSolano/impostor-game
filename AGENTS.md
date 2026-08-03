@@ -17,7 +17,8 @@ Web app mobile-first multiplayer de dedução social. Todos recebem a mesma pala
 3. **`votes` não tem `SELECT` para o cliente.** Progresso vira contador em `rooms.votes_cast`; apuração vira `rooms.last_vote_tally` só depois de resolvida.
 4. **Nenhuma `SERVICE_ROLE_KEY` na aplicação.** Se apareceu uma, é porque uma regra de jogo escapou do banco.
 5. **Sem `any`.** Tipos de banco vêm de `supabase gen types`, nunca escritos à mão.
-6. **O app não gerencia ordem da mesa.** Não existe "sua vez de falar" nem timer de discussão. Quem fala quando é decidido pelo grupo, ao vivo.
+6. **O app dá ritmo à dica escrita, não à conversa.** Existe ordem sorteada e prazo para *escrever a palavra* (turnos de dica). Não existe "sua vez de falar": enquanto o contador do próximo corre, a mesa comenta à vontade, e é justamente essa janela que faz o mesmo fluxo servir presencial e remoto. Nada no app pede que alguém fale, nem cronometra a discussão.
+7. **A palavra secreta não é bloqueada como dica.** Recusar confirmaria ao impostor que ele acertou. O aviso na tela é preventivo — ver IMP-33.
 
 ## Comandos
 

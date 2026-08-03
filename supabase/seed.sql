@@ -150,6 +150,83 @@ $$;
 -- Abre a votação (como host) e registra os votos informados.
 -- p_votes: array de índices de jogador; NULL no lugar do alvo = "Pular Votação".
 -- Ex: '[{"voter":1,"target":0},{"voter":2,"target":null}]'
+/** user_id de quem está no turno agora. NULL se não há turno correndo. */
+create or replace function tests.turn_user(p_room_id uuid)
+returns uuid
+language sql
+as $$
+  select p.user_id
+  from rooms r
+  join round_clues rc
+    on rc.round_id = r.active_round_id
+   and rc.discussion_round = r.discussion_round
+   and rc.turn_index = r.clue_turn_index
+  join players p on p.id = rc.player_id
+  where r.id = p_room_id;
+$$;
+
+/** player_id de quem está no turno agora. */
+create or replace function tests.turn_player(p_room_id uuid)
+returns uuid
+language sql
+as $$
+  select p.id
+  from rooms r
+  join round_clues rc
+    on rc.round_id = r.active_round_id
+   and rc.discussion_round = r.discussion_round
+   and rc.turn_index = r.clue_turn_index
+  join players p on p.id = rc.player_id
+  where r.id = p_room_id;
+$$;
+
+/**
+ * Cumpre todos os turnos de dicas da rodada atual. (IMP-30 a IMP-37)
+ *
+ * A fase DISCUSSION agora exige que todos passem pelo turno antes de a votação
+ * poder abrir, então quase todo teste de votação precisa disso antes.
+ *
+ * Cada jogador manda uma palavra válida e distinta (`dica`, `dicab`, ...), para o
+ * teste poder distinguir quem falou o quê sem depender de sorteio.
+ */
+create or replace function tests.finish_clue_turns(p_room_id uuid)
+returns void
+language plpgsql
+as $$
+declare
+  v_room    rooms;
+  v_player  players;
+  v_guard   int := 0;
+begin
+  loop
+    select * into v_room from rooms where id = p_room_id;
+
+    exit when v_room.status <> 'DISCUSSION' or clue_turns_done(p_room_id);
+
+    v_guard := v_guard + 1;
+    if v_guard > 50 then
+      raise exception 'finish_clue_turns não convergiu — turno travado?';
+    end if;
+
+    select p.* into v_player
+    from round_clues rc
+    join players p on p.id = rc.player_id
+    where rc.round_id = v_room.active_round_id
+      and rc.discussion_round = v_room.discussion_round
+      and rc.turn_index = v_room.clue_turn_index;
+
+    if v_player.id is null then
+      raise exception 'Nenhum jogador na posição % da ordem', v_room.clue_turn_index;
+    end if;
+
+    perform tests.act_as(v_player.user_id);
+    perform submit_clue(p_room_id, 'dica' || chr(97 + (v_guard % 26)));
+  end loop;
+
+  perform tests.clear_identity();
+end;
+$$;
+
 create or replace function tests.run_voting(p_ctx jsonb, p_votes jsonb)
 returns void
 language plpgsql
@@ -159,6 +236,9 @@ declare
   v_vote    jsonb;
   v_target  uuid;
 begin
+  -- A votação só abre depois de todos darem a dica.
+  perform tests.finish_clue_turns(v_room_id);
+
   perform tests.act_as(((p_ctx -> 'users') ->> 0)::uuid);
   perform open_voting(v_room_id);
 

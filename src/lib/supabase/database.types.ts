@@ -92,6 +92,7 @@ export type Database = {
           is_alive: boolean
           joined_at: string
           name: string
+          profanity_strikes: number
           room_id: string
           score: number
           user_id: string
@@ -104,6 +105,7 @@ export type Database = {
           is_alive?: boolean
           joined_at?: string
           name: string
+          profanity_strikes?: number
           room_id: string
           score?: number
           user_id: string
@@ -116,6 +118,7 @@ export type Database = {
           is_alive?: boolean
           joined_at?: string
           name?: string
+          profanity_strikes?: number
           room_id?: string
           score?: number
           user_id?: string
@@ -130,9 +133,22 @@ export type Database = {
           },
         ]
       }
+      profanity_words: {
+        Row: {
+          word: string
+        }
+        Insert: {
+          word: string
+        }
+        Update: {
+          word?: string
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           active_round_id: string | null
+          clue_turn_index: number
           code: string
           created_at: string
           discussion_round: number
@@ -146,12 +162,14 @@ export type Database = {
           revealed_impostor_id: string | null
           revealed_word: string | null
           status: Database["public"]["Enums"]["room_status"]
+          turn_deadline: string | null
           updated_at: string
           votes_cast: number
           voting_cycle: number
         }
         Insert: {
           active_round_id?: string | null
+          clue_turn_index?: number
           code: string
           created_at?: string
           discussion_round?: number
@@ -165,12 +183,14 @@ export type Database = {
           revealed_impostor_id?: string | null
           revealed_word?: string | null
           status?: Database["public"]["Enums"]["room_status"]
+          turn_deadline?: string | null
           updated_at?: string
           votes_cast?: number
           voting_cycle?: number
         }
         Update: {
           active_round_id?: string | null
+          clue_turn_index?: number
           code?: string
           created_at?: string
           discussion_round?: number
@@ -184,6 +204,7 @@ export type Database = {
           revealed_impostor_id?: string | null
           revealed_word?: string | null
           status?: Database["public"]["Enums"]["room_status"]
+          turn_deadline?: string | null
           updated_at?: string
           votes_cast?: number
           voting_cycle?: number
@@ -208,6 +229,51 @@ export type Database = {
             columns: ["host_player_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      round_clues: {
+        Row: {
+          discussion_round: number
+          player_id: string
+          round_id: string
+          submitted_at: string | null
+          timed_out: boolean
+          turn_index: number
+          word: string | null
+        }
+        Insert: {
+          discussion_round: number
+          player_id: string
+          round_id: string
+          submitted_at?: string | null
+          timed_out?: boolean
+          turn_index: number
+          word?: string | null
+        }
+        Update: {
+          discussion_round?: number
+          player_id?: string
+          round_id?: string
+          submitted_at?: string | null
+          timed_out?: boolean
+          turn_index?: number
+          word?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_clues_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_clues_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
             referencedColumns: ["id"]
           },
         ]
@@ -349,6 +415,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_clue_turn: { Args: { p_room_id: string }; Returns: undefined }
       assert_status: {
         Args: {
           p_expected: Database["public"]["Enums"]["room_status"]
@@ -356,6 +423,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      begin_clue_round: { Args: { p_room_id: string }; Returns: undefined }
       begin_round: {
         Args: {
           p_force_impostor_id?: string
@@ -369,6 +437,8 @@ export type Database = {
         Returns: undefined
       }
       close_room: { Args: { p_room_id: string }; Returns: undefined }
+      clue_turn_seconds: { Args: { p_turn_index: number }; Returns: number }
+      clue_turns_done: { Args: { p_room_id: string }; Returns: boolean }
       confirm_word_seen: { Args: { p_room_id: string }; Returns: undefined }
       create_room: { Args: { p_name: string }; Returns: Json }
       current_player: {
@@ -381,6 +451,7 @@ export type Database = {
           is_alive: boolean
           joined_at: string
           name: string
+          profanity_strikes: number
           room_id: string
           score: number
           user_id: string
@@ -392,6 +463,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      expire_clue_turn: { Args: { p_room_id: string }; Returns: undefined }
       expire_last_chance: { Args: { p_room_id: string }; Returns: undefined }
       finish_game: {
         Args: {
@@ -402,9 +474,17 @@ export type Database = {
         Returns: undefined
       }
       gen_room_code: { Args: never; Returns: string }
+      is_profane: { Args: { p_word: string }; Returns: boolean }
       is_room_member: { Args: { p_room_id: string }; Returns: boolean }
+      is_valid_clue: { Args: { p_word: string }; Returns: boolean }
       join_room: { Args: { p_code: string; p_name: string }; Returns: Json }
+      kick_player: {
+        Args: { p_player_id: string; p_room_id: string }
+        Returns: undefined
+      }
       leave_room: { Args: { p_room_id: string }; Returns: undefined }
+      next_clue_round: { Args: { p_room_id: string }; Returns: undefined }
+      normalize_word: { Args: { p_word: string }; Returns: string }
       open_voting: { Args: { p_room_id: string }; Returns: undefined }
       owns_player: { Args: { p_player_id: string }; Returns: boolean }
       pick_avatar_color: { Args: { p_room_id: string }; Returns: string }
@@ -425,6 +505,10 @@ export type Database = {
           p_room_id: string
         }
         Returns: undefined
+      }
+      submit_clue: {
+        Args: { p_room_id: string; p_word: string }
+        Returns: Json
       }
       submit_impostor_guess: {
         Args: { p_room_id: string; p_word_text: string }

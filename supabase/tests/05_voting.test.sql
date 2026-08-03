@@ -15,6 +15,9 @@ select tests.start_and_reveal(
   ((select ctx -> 'players' from c) ->> 3)::uuid
 );
 
+-- A votação só abre depois de todos darem a dica. (IMP-37)
+select tests.finish_clue_turns((select id from r));
+
 select tests.act_as(((select ctx -> 'users' from c) ->> 0)::uuid);
 select open_voting((select id from r));
 select tests.clear_identity();

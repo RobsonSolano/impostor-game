@@ -4,6 +4,7 @@ export type Room = Database['public']['Tables']['rooms']['Row']
 export type Player = Database['public']['Tables']['players']['Row']
 export type PlayerCard = Database['public']['Tables']['player_cards']['Row']
 export type Word = Database['public']['Tables']['words']['Row']
+export type RoundClue = Database['public']['Tables']['round_clues']['Row']
 
 export type RoomStatus = Database['public']['Enums']['room_status']
 export type GameOutcome = Database['public']['Enums']['game_outcome']
@@ -14,6 +15,20 @@ export type JoinResult = {
   room_id: string
   player_id: string
   code: string
+}
+
+/**
+ * Retorno de `submit_clue`.
+ *
+ * Palavra vulgar volta com `ok: false` em vez de exceção: exceção em plpgsql
+ * desfaria a transação e o contador de faltas voltaria a zero. Ver IMP-34.
+ */
+export type ClueResult = {
+  ok: boolean
+  reason?: 'PROFANITY'
+  strikes?: number
+  kicked?: boolean
+  word?: string
 }
 
 /** Retorno de `submit_impostor_guess`. */

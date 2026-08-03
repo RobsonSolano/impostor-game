@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap;
 
-select plan(10);
+select plan(12);
 
 create temporary table c as select tests.seed_room(4) as ctx;
 create temporary table r as select (ctx ->> 'room_id')::uuid as id from c;
@@ -56,6 +56,28 @@ select is(
   1,
   'IMP-08: discussão começa na rodada 1'
 );
+
+-- ---------------------------------------------------------------------------
+-- IMP-37 — a votação não abre antes de todos darem a dica
+-- ---------------------------------------------------------------------------
+
+select tests.act_as(((select ctx -> 'users' from c) ->> 0)::uuid);
+select throws_ok(
+  format('select open_voting(%L)', (select id from r)),
+  'IM002',
+  null,
+  'IMP-37: host não abre a votação com turnos de dica pendentes'
+);
+select tests.clear_identity();
+
+select is(
+  (select status from rooms where id = (select id from r)),
+  'DISCUSSION'::room_status,
+  'IMP-37: a recusa não altera a fase'
+);
+
+-- Todos cumprem o turno.
+select tests.finish_clue_turns((select id from r));
 
 -- ---------------------------------------------------------------------------
 -- IMP-09 / IMP-10 — só o host abre a votação
