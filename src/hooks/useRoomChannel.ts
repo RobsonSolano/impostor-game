@@ -2,6 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { useKeepFresh } from '@/hooks/useKeepFresh'
 import type { Player, Room } from '@/lib/types'
 
 type ChannelState = {
@@ -39,6 +40,10 @@ function sortByJoin(players: Player[]) {
  */
 export function useRoomChannel(roomId: string | null) {
   const [state, setState] = useState<ChannelState>(INITIAL)
+
+  // Rede de segurança: Realtime sozinho já congelou uma partida real quando os
+  // celulares ficaram minutos com a tela bloqueada no lobby. Ver useKeepFresh.
+  const freshness = useKeepFresh(Boolean(roomId))
 
   // Evita setState depois do unmount quando o fetch termina tarde.
   const mounted = useRef(true)
@@ -126,6 +131,12 @@ export function useRoomChannel(roomId: string | null) {
       void supabase.removeChannel(channel)
     }
   }, [roomId])
+
+  // Ressincroniza quando a aba volta, a rede volta, ou a sondagem bate.
+  useEffect(() => {
+    if (!roomId || freshness === 0) return
+    void Promise.resolve().then(() => loadRoom())
+  }, [roomId, freshness])
 
   return state
 }

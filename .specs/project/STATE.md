@@ -104,6 +104,22 @@ Dev está criando o projeto Supabase (confirmado em 2026-07-31). Migrations e se
 
 O WebSocket de HMR do Next falhava em loop no ambiente de validação e remontava a página, limpando inputs controlados no meio da interação — parecia bug de estado do React. Validação de UI passou a rodar contra `next build && next start`, que também é mais fiel ao que roda no celular.
 
+### Realtime sozinho congela o jogo — evento perdido não tem volta
+
+**Sintoma:** partida travada (sala `TQAK`, 06/08). Os três confirmaram o card, ninguém foi chamado para escrever a palavra, e a mesa teve que encerrar a sala e abrir outra.
+
+**O banco estava perfeito.** Sala em DISCUSSION, ordem sorteada (Papai/Heitorzinho/Théozinho nos índices 0/1/2), prazo gravado. O que denunciou foi `timed_out = false` em todos com `clue_turn_index` parado em 0: o prazo venceu e **ninguém chamou `expire_clue_turn`** — o que só acontece se nenhum cliente estava na tela de turnos.
+
+**Root cause:** os celulares não receberam o evento de Realtime da transição WORD_REVEAL → DISCUSSION e ficaram presos na tela do card. Papai entrou 21:43, Heitorzinho 21:45, e a partida só começou 21:59 — quinze minutos de tela bloqueada e aba em segundo plano, tempo de sobra para o WebSocket morrer.
+
+**Por que era grave:** o app dependia SÓ de Realtime depois da carga inicial. Evento perdido = tela congelada sem saída, porque ninguém pensa em recarregar a página no meio de um jogo. E o pior caso é silencioso: socket zumbi não reporta erro, então nem o aviso de "Reconectando" aparecia necessariamente.
+
+**Correção:** `useKeepFresh` — ressincroniza quando a aba volta a ficar visível (o caso exato), quando a rede volta, e por sondagem de 8s enquanto visível (o socket zumbi). Só sonda com a aba visível, para não gastar bateria atualizando tela que ninguém olha.
+
+**Verificação:** com o WebSocket derrubado no Playwright, o navegador ainda acompanha o lobby enchendo e alcança os turnos de dica.
+
+**Lição geral:** Realtime é otimização de latência, não fonte de verdade. Toda tela que depende de push precisa de um caminho de recuperação — a pergunta certa é "e se este evento não chegar?", não "o evento vai chegar?".
+
 ## Ideias diferidas
 
 - Cron de limpeza de salas abandonadas → Milestone 2.
