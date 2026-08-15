@@ -62,6 +62,16 @@ O status continua se chamando `DISCUSSION`: o papel da fase é o mesmo (entre re
 
 `submit_clue` devolve `{ ok: false, reason: 'PROFANITY', strikes }` em vez de `raise`. Exceção em plpgsql desfaz a transação inteira — o incremento do contador de faltas voltaria a zero junto, e a terceira falta nunca chegaria. Erros que não gravam nada (fase errada, não é sua vez, formato inválido) continuam levantando exceção.
 
+### 2026-08-04 — Rodízio do impostor: peso, não exclusão
+
+Jogo real com a família expôs o problema: sorteio uniforme deu 3 partidas seguidas com o mesmo impostor, duas vezes. O dev propôs excluir os dois últimos impostores do sorteio.
+
+Simulei as duas antes de escolher. Exclusão distribui perfeitamente **e entrega o jogo**: em mesa de 4 sobram 2 candidatos, em mesa de 3 sobra 1. Como o caso de uso é exatamente mesa pequena, a regra se auto-sabota.
+
+Adotado peso = (rodadas desde a última vez)², sem excluir ninguém: 3,4% de repetição contra 25%, e a mesa continua com todos os jogadores como suspeitos possíveis. Bônus de design: repetir vira disfarce, porque ninguém suspeita de quem acabou de ser.
+
+Lição geral: quando a regra "mais justa" reduz o conjunto de suspeitos, ela está pagando justiça com informação — e num jogo de dedução, informação é o preço mais caro que existe.
+
 ## Blockers
 
 ### 🔴 Credenciais do Supabase pendentes

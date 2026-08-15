@@ -59,6 +59,7 @@ ENTÃO o sistema recusa a ação.
 QUANDO o host inicia a partida com 3 ou mais jogadores
 ENTÃO o sistema sorteia exatamente 1 jogador ativo como impostor, sorteia 1 palavra entre as 200 disponíveis, cria o card individual de cada jogador e move a sala para WORD_REVEAL.
 
+- O sorteio é **ponderado por tempo sem ser impostor** — ver IMP-38.
 - **O impostor é sorteado ANTES da palavra.** Uma rodada sem impostor não é jogo, então essa é a primeira coisa a existir e a primeira a falhar se algo estiver errado.
 - Nunca existe rodada com zero impostores nem com mais de um. Isso é invariante, não tendência: verificado em 30 sorteios consecutivos.
 - O impostor sorteado é sempre um jogador ativo da própria sala.
@@ -198,6 +199,24 @@ ENTÃO uma contagem regressiva visível de 5 até 0 antecede a revelação do re
 
 - É só suspense: o resultado e o placar já estão gravados no banco antes desta tela aparecer.
 
+**IMP-38 — Rodízio do impostor sem entregar o jogo**
+QUANDO uma nova partida sorteia o impostor
+ENTÃO cada jogador ativo entra no sorteio com peso igual ao quadrado das rodadas desde a última vez que foi impostor, e ninguém é excluído.
+
+- Quem nunca foi impostor na sala tem o peso máximo.
+- Quem acabou de ser impostor tem peso 1: **improvável, nunca impossível**.
+- Problema que originou a regra: em mesa de 4, o sorteio uniforme repete o mesmo impostor na rodada seguinte em 25% das vezes e emenda três em 6,4% — aconteceu em jogo real com a família do dev.
+- **Regra descartada: excluir os dois últimos impostores.** Distribui perfeitamente, mas entrega o jogo em mesa pequena, que é o caso de uso: com 4 jogadores sobram 2 candidatos (a mesa ganha 50% antes de qualquer dica) e com 3 sobra 1, identificando o impostor pela própria regra.
+- Medido em 20 mil simulações de mesa de 4, 12 partidas:
+
+| Regra | Repete seguido | 3 seguidas | Candidatos para a mesa |
+|---|---|---|---|
+| Uniforme | 25,1% | 6,40% | 4,00 de 4 |
+| Excluir os 2 últimos | 0,0% | 0,00% | 2,25 de 4 |
+| **Peso quadrático** | **3,4%** | **0,07%** | **4,00 de 4** |
+
+- Efeito de jogo desejado: repetir vira o melhor disfarce disponível, porque ninguém suspeita de quem acabou de ser. Com exclusão isso é impossível e a suspeita se concentra sozinha.
+
 ### Banco de palavras
 
 **IMP-28 — Uma palavra, fácil para criança de 9 anos**
@@ -243,6 +262,7 @@ Cada requisito acima tem teste nomeado com seu ID. Regras de jogo → pgTAP em `
 | IMP-25, IMP-26 | `supabase/tests/09_leave_and_close.test.sql` |
 | IMP-05 (invariante), IMP-19, IMP-27 | `supabase/tests/10_impostor_invariant.test.sql` |
 | IMP-28 | `supabase/tests/11_words.test.sql` |
+| IMP-38 | `supabase/tests/14_impostor_rotation.test.sql` |
 | IMP-29 | Verificação em navegador nas 3 larguras (390, 820, 1440) |
 | IMP-07 | `src/components/shared/HoldToReveal.test.tsx` |
 | IMP-20, IMP-23, IMP-24 | Verificação manual multi-dispositivo |
