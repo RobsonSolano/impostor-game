@@ -203,6 +203,17 @@ begin
 
     exit when v_room.status <> 'DISCUSSION' or clue_turns_done(p_room_id);
 
+    -- Anúncio de votação indecisa segurando a largada (IMP-39): o teste não espera
+    -- os 10 segundos de relógio, força a hora e larga.
+    if v_room.clue_round_starts_at is not null then
+      update rooms set clue_round_starts_at = now() - interval '1 second'
+      where id = p_room_id;
+      perform tests.act_as((select user_id from players where room_id = p_room_id limit 1));
+      perform start_clue_round_now(p_room_id);
+      perform tests.clear_identity();
+      continue;
+    end if;
+
     v_guard := v_guard + 1;
     if v_guard > 50 then
       raise exception 'finish_clue_turns não convergiu — turno travado?';

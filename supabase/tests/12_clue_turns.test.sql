@@ -72,8 +72,8 @@ select ok(
 );
 
 select ok(
-  (select turn_deadline from rooms where id = (select id from r)) <= now() + interval '15 seconds',
-  'IMP-31: o primeiro jogador tem no máximo 15 segundos'
+  (select turn_deadline from rooms where id = (select id from r)) <= now() + interval '30 seconds',
+  'IMP-31: o prazo do turno é de 30 segundos'
 );
 
 -- ---------------------------------------------------------------------------
@@ -119,9 +119,11 @@ select is(
   'IMP-35: o turno passa para a próxima posição'
 );
 
+-- Uniforme: o primeiro tinha 15s por não ter dica anterior para ler, e era quem
+-- mais estourava o prazo. Ver IMP-39.
 select ok(
-  (select turn_deadline from rooms where id = (select id from r)) > now() + interval '15 seconds',
-  'IMP-31: do segundo jogador em diante o prazo é de 20 segundos'
+  (select turn_deadline from rooms where id = (select id from r)) > now() + interval '25 seconds',
+  'IMP-31: todo turno tem os mesmos 30 segundos, sem primeiro turno encurtado'
 );
 
 -- ---------------------------------------------------------------------------

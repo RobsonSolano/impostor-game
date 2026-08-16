@@ -9,20 +9,20 @@ import { PlayerGrid } from '@/components/shared/PlayerGrid'
 import { PlayerAvatar } from '@/components/shared/PlayerAvatar'
 import { Countdown } from '@/components/shared/Countdown'
 import { ClueDialog } from '@/components/game/ClueDialog'
-import { expireClueTurn, nextClueRound, openVoting } from '@/lib/game/actions'
+import { expireClueTurn, nextClueRound, openVoting, startClueRoundNow } from '@/lib/game/actions'
 import { toDisplayError } from '@/lib/game/errors'
 import { cn } from '@/lib/utils'
 import type { PhaseProps } from '@/components/game/types'
 import type { Player, RoundClue, VoteTally } from '@/lib/types'
 
 /**
- * Espelha `clue_turn_seconds` no banco: 15s para o primeiro da ordem (não tem dica
- * anterior para ler) e 20s para os seguintes, que na mesa é também o tempo de
- * comentar a dica que acabou de aparecer.
+ * Espelha `clue_turn_seconds` no banco. Quem manda no prazo é `turn_deadline`;
+ * isto só desenha a contagem.
  */
-function turnTotalMs(turnIndex: number) {
-  return turnIndex === 0 ? 15_000 : 20_000
-}
+const TURN_MS = 30_000
+
+/** Espelha `interval '10 seconds'` do anúncio de votação indecisa. (IMP-39) */
+const INTERLUDE_MS = 10_000
 
 type CluePhaseProps = PhaseProps & {
   clues: RoundClue[]
@@ -47,6 +47,7 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
    */
   const [dismissedTurn, setDismissedTurn] = useState<string | null>(null)
   const expireRequested = useRef<string | null>(null)
+  const startRequested = useRef<string | null>(null)
 
   const byId = new Map(players.map((player) => [player.id, player]))
   const roundClues = clues.filter((clue) => clue.discussion_round === room.discussion_round)
@@ -56,8 +57,16 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
   const currentClue = roundClues.find((clue) => clue.turn_index === room.clue_turn_index)
   const currentPlayer = currentClue ? byId.get(currentClue.player_id) : undefined
 
+  /**
+   * Anúncio da votação indecisa segurando a largada. (IMP-39)
+   *
+   * Precisa ser checado ANTES de `turnsDone`: nos dois casos `turn_deadline` é
+   * nulo, e sem esta distinção a pausa seria lida como "todos já deram a dica".
+   */
+  const aguardandoLargada = room.clue_round_starts_at !== null
+
   // O banco zera `turn_deadline` quando não há mais turno a cumprir.
-  const turnsDone = room.turn_deadline === null
+  const turnsDone = !aguardandoLargada && room.turn_deadline === null
   const isMyTurn = !turnsDone && myClue?.turn_index === room.clue_turn_index
   const tally = room.last_vote_tally as VoteTally | null
 
@@ -78,6 +87,19 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
       // Outro cliente chegou primeiro. O Realtime traz o turno seguinte.
     })
   }, [room.id, room.turn_deadline])
+
+  /**
+   * Larga a rodada quando os 10s do anúncio acabam. Mesmo padrão do turno
+   * vencido: o Postgres não dispara nada sozinho, e a função é idempotente.
+   */
+  const handleStart = useCallback(() => {
+    const at = room.clue_round_starts_at
+    if (!at || startRequested.current === at) return
+    startRequested.current = at
+    void startClueRoundNow(room.id).catch(() => {
+      // Outro cliente largou primeiro. O Realtime traz a ordem nova.
+    })
+  }, [room.id, room.clue_round_starts_at])
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -118,6 +140,34 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
     )
   }
 
+  // Anúncio da votação indecisa: a mesa lê o resultado e a rodada larga junto.
+  if (aguardandoLargada) {
+    return (
+      <PhaseShell
+        eyebrow={`Rodada ${room.discussion_round}`}
+        title={tally && tally.skip >= tally.top ? 'A mesa preferiu pular' : 'Deu empate na votação'}
+        subtitle="Ninguém foi suspeitado o suficiente para sair. A rodada de dicas recomeça em instantes."
+        aside={<Mesa room={room} players={players} me={me} />}
+      >
+        <div className="border-warn/40 bg-warn/10 flex flex-col items-center gap-5 rounded-3xl border p-8 text-center">
+          <Scale className="text-warn size-10" aria-hidden />
+
+          <VotingOutcome tally={tally} players={players} round={room.discussion_round} bare />
+
+          <Countdown
+            key={room.clue_round_starts_at ?? 'sem-largada'}
+            deadline={room.clue_round_starts_at}
+            totalMs={INTERLUDE_MS}
+            onExpire={handleStart}
+            tone="primary"
+          />
+
+          <p className="text-muted-foreground text-sm">Nova rodada de dicas começando…</p>
+        </div>
+      </PhaseShell>
+    )
+  }
+
   return (
     <>
       {isMyTurn && (
@@ -127,7 +177,7 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
           key={turnKey}
           roomId={room.id}
           deadline={room.turn_deadline}
-          totalMs={turnTotalMs(room.clue_turn_index)}
+          totalMs={TURN_MS}
           onExpire={handleExpire}
           onDismiss={() => setDismissedTurn(turnKey)}
           open={!dismissed}
@@ -212,7 +262,7 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
               <Countdown
                 key={room.turn_deadline ?? 'sem-prazo'}
                 deadline={room.turn_deadline}
-                totalMs={turnTotalMs(room.clue_turn_index)}
+                totalMs={TURN_MS}
                 onExpire={handleExpire}
               />
             </div>
@@ -251,10 +301,13 @@ function VotingOutcome({
   tally,
   players,
   round,
+  bare = false,
 }: {
   tally: VoteTally | null
   players: Player[]
   round: number
+  /** Dentro do anúncio em tela cheia a moldura já existe: só o conteúdo. */
+  bare?: boolean
 }) {
   if (round <= 1 || !tally) return null
 
@@ -262,6 +315,21 @@ function VotingOutcome({
   const empatados = players
     .filter((p) => tally.top > 0 && (tally.players[p.id] ?? 0) === tally.top)
     .map((p) => `${p.name} ${tally.players[p.id]}`)
+
+  if (bare) {
+    return (
+      <div>
+        <p className="text-xl font-bold text-pretty">
+          {pulou
+            ? `${tally.skip} ${tally.skip === 1 ? 'voto' : 'votos'} para pular.`
+            : empatados.join('  ·  ')}
+        </p>
+        <p className="text-muted-foreground mt-2 text-sm text-pretty">
+          Deem mais uma dica cada um e votem de novo.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <motion.div

@@ -83,6 +83,17 @@ export async function expireClueTurn(roomId: string): Promise<void> {
   await callRpc(supabase.rpc('expire_clue_turn', { p_room_id: roomId }))
 }
 
+/**
+ * Larga a rodada de dicas depois do anúncio de votação indecisa. (IMP-39)
+ *
+ * Chamada por qualquer cliente cujo contador de 10s zerou. Idempotente no banco,
+ * então todos chamando é inofensivo.
+ */
+export async function startClueRoundNow(roomId: string): Promise<void> {
+  const supabase = getSupabaseBrowserClient()
+  await callRpc(supabase.rpc('start_clue_round_now', { p_room_id: roomId }))
+}
+
 /** Nova rodada de dicas, mantendo as anteriores visíveis. Só o host. (IMP-37) */
 export async function nextClueRound(roomId: string): Promise<void> {
   const supabase = getSupabaseBrowserClient()

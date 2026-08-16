@@ -148,6 +148,7 @@ export type Database = {
       rooms: {
         Row: {
           active_round_id: string | null
+          clue_round_starts_at: string | null
           clue_turn_index: number
           code: string
           created_at: string
@@ -169,6 +170,7 @@ export type Database = {
         }
         Insert: {
           active_round_id?: string | null
+          clue_round_starts_at?: string | null
           clue_turn_index?: number
           code: string
           created_at?: string
@@ -190,6 +192,7 @@ export type Database = {
         }
         Update: {
           active_round_id?: string | null
+          clue_round_starts_at?: string | null
           clue_turn_index?: number
           code?: string
           created_at?: string
@@ -474,6 +477,10 @@ export type Database = {
         Returns: undefined
       }
       gen_room_code: { Args: never; Returns: string }
+      impostor_weight: {
+        Args: { p_player_id: string; p_room_id: string; p_round_number: number }
+        Returns: number
+      }
       is_profane: { Args: { p_word: string }; Returns: boolean }
       is_room_member: { Args: { p_room_id: string }; Returns: boolean }
       is_valid_clue: { Args: { p_word: string }; Returns: boolean }
@@ -498,6 +505,7 @@ export type Database = {
       }
       require_uid: { Args: never; Returns: string }
       resolve_voting: { Args: { p_room_id: string }; Returns: undefined }
+      start_clue_round_now: { Args: { p_room_id: string }; Returns: undefined }
       start_game: {
         Args: {
           p_force_impostor_id?: string

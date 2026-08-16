@@ -28,8 +28,8 @@ ENTÃO o sistema sorteia uma ordem entre os jogadores ativos e a exibe para todo
 QUANDO chega o turno de um jogador
 ENTÃO só ele vê o campo de escrever, com contagem regressiva visível, e os outros veem de quem é a vez.
 
-- O primeiro jogador da ordem tem **15 segundos**: não tem dica anterior para ler.
-- Os seguintes têm **20 segundos**, que na mesa é também o tempo de a mesa comentar a dica anterior.
+- Todo turno tem **30 segundos**, sem exceção. O primeiro tinha 15s por não ter dica anterior para ler, e era justamente quem mais estourava o prazo; uma regra só é mais fácil de anunciar na mesa.
+- A janela é também o tempo de a mesa comentar a dica anterior.
 - Quem manda no prazo é `rooms.turn_deadline`, no banco. O contador na tela só desenha.
 
 **IMP-32 — Uma palavra, e só uma**
@@ -80,6 +80,16 @@ ENTÃO o host vê duas opções: "Abrir votação" e "Nova rodada"; os outros ve
 - "Abrir votação" segue para VOTING como hoje.
 - O host **não** consegue abrir a votação antes de todos terem passado pelo turno: até então a ação é recusada.
 
+**IMP-39 — Votação indecisa é anunciada antes de recomeçar**
+QUANDO a apuração termina em empate no topo ou com "pular" vencedor
+ENTÃO a mesa vê uma tela com o resultado — nomes e contagem — e a rodada de dicas seguinte começa sozinha 10 segundos depois.
+
+- Origem: partida real em que a mesa votou, deu 2 a 2 e a tela voltou direto para os turnos. Ninguém entendeu o que aconteceu, e concluíram que o app tinha quebrado.
+- O anúncio mostra **os nomes e os votos** ("Ana 2 · Papai 2"), não só "houve empate": a mesa precisa ver que o empate aconteceu, senão parece que o voto se perdeu.
+- Durante a pausa **nenhum turno corre**. Antes, o relógio do primeiro jogador começava no instante do empate, e ele perdia tempo do próprio turno lendo o resultado.
+- Durante a pausa a rodada **não** conta como concluída: o host não consegue abrir a votação nem pular para outra rodada, porque a rodada nem começou.
+- A largada é disparada por qualquer cliente cujo contador zerou, e é idempotente.
+
 ## Não incluído
 
 - Dicionário de português para validar existência da palavra (avaliado e recusado em IMP-32).
@@ -92,6 +102,7 @@ ENTÃO o host vê duas opções: "Abrir votação" e "Nova rodada"; os outros ve
 | Requisito | Onde é verificado |
 |---|---|
 | IMP-30, IMP-31, IMP-35, IMP-36, IMP-37 | `supabase/tests/12_clue_turns.test.sql` |
+| IMP-39 | `supabase/tests/15_tie_interlude.test.sql` e `src/components/game/VotingOutcome.test.tsx` |
 | IMP-32, IMP-33, IMP-34 | `supabase/tests/13_clue_validation.test.sql` |
 | IMP-32 (cliente) | `src/lib/game/clue.test.ts` |
 | IMP-31 (contador), IMP-34 (aviso) | Verificação em navegador |

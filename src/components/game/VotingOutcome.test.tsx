@@ -23,7 +23,8 @@ const room = (over: Partial<Room> = {}): Room =>
     votes_cast: 0,
     games_played: 0,
     clue_turn_index: 0,
-    turn_deadline: new Date(Date.now() + 20_000).toISOString(),
+    turn_deadline: new Date(Date.now() + 30_000).toISOString(),
+    clue_round_starts_at: null,
     guess_deadline: null,
     active_round_id: 'r1',
     eliminated_player_id: null,
@@ -63,10 +64,10 @@ const clues: RoundClue[] = players.map((p, i) => ({
   submitted_at: null,
 }))
 
-function renderFase(tally: unknown, discussionRound = 2) {
+function renderFase(tally: unknown, discussionRound = 2, over: Partial<Room> = {}) {
   return render(
     <CluePhase
-      room={room({ last_vote_tally: tally as never, discussion_round: discussionRound })}
+      room={room({ last_vote_tally: tally as never, discussion_round: discussionRound, ...over })}
       players={players}
       me={players[0]}
       isHost
@@ -102,6 +103,22 @@ describe('CluePhase — explicar por que a mesa voltou às dicas', () => {
     renderFase(null, 1)
     expect(screen.queryByText(/deu empate/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/ninguém foi eliminado/i)).not.toBeInTheDocument()
+  })
+
+  it('anuncia o empate em tela cheia durante a pausa, com contagem para a largada', () => {
+    // IMP-39: nos 10s de anúncio ninguém escreve — o relógio do primeiro jogador
+    // não pode correr enquanto ele lê por que a mesa voltou.
+    renderFase({ cycle: 1, skip: 0, top: 2, players: { p2: 2, p3: 2 } }, 2, {
+      turn_deadline: null,
+      clue_round_starts_at: new Date(Date.now() + 10_000).toISOString(),
+    })
+
+    expect(screen.getByText(/deu empate na votação/i)).toBeInTheDocument()
+    expect(screen.getByText(/ninguém foi suspeitado/i)).toBeInTheDocument()
+    expect(screen.getByText(/nova rodada de dicas começando/i)).toBeInTheDocument()
+    // Nada de campo para escrever nem botão de ação durante o anúncio.
+    expect(screen.queryByText(/escrever minha palavra/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/abrir votação/i)).not.toBeInTheDocument()
   })
 
   it('aparece ANTES do quadro de dicas — no celular, embaixo é fora da tela', () => {
