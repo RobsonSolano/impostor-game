@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Ban, Loader2, MessagesSquare, PencilLine, RotateCcw, Vote } from 'lucide-react'
+import { Ban, Loader2, MessagesSquare, PencilLine, RotateCcw, Scale, Vote } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PhaseShell } from '@/components/shared/PhaseShell'
 import { PlayerGrid } from '@/components/shared/PlayerGrid'
@@ -148,7 +148,9 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
             ? isHost
               ? 'Você decide: mais uma rodada de dicas, ou já para a votação.'
               : 'O host decide se vem outra rodada de dicas ou a votação.'
-            : 'Enquanto o contador corre, comentem as dicas à vontade — o app não interrompe.'
+            : room.discussion_round > 1 && tally
+              ? 'A votação anterior não decidiu nada. Mais uma rodada de dicas e votem de novo.'
+              : 'Enquanto o contador corre, comentem as dicas à vontade — o app não interrompe.'
         }
         aside={<Mesa room={room} players={players} me={me} />}
         action={
@@ -217,6 +219,15 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
           )
         }
       >
+        {/*
+          POR QUE a mesa voltou às dicas — no TOPO, antes do quadro.
+          Já existia, mas no fim do conteúdo: no celular ficava fora da tela, e
+          uma família jogando concluiu que o app tinha quebrado ao votar duas
+          vezes sem nada acontecer. A regra estava certa (empate não elimina); o
+          que faltou foi dizer isso.
+        */}
+        <VotingOutcome tally={tally} players={players} round={room.discussion_round} />
+
         <ClueBoard
           roundClues={roundClues}
           previous={previous}
@@ -224,20 +235,55 @@ export function CluePhase({ room, players, me, isHost, clues }: CluePhaseProps) 
           currentTurnIndex={room.clue_turn_index}
           turnsDone={turnsDone}
         />
-
-        {/* Só depois de um ciclo indeciso: explica POR QUE a mesa voltou às dicas. */}
-        {room.discussion_round > 1 && tally && (
-          <div className="border-muted bg-muted/30 mt-5 rounded-2xl border p-4">
-            <p className="text-sm font-semibold">Votação anterior</p>
-            <p className="text-muted-foreground mt-1 text-sm text-pretty">
-              {tally.skip >= tally.top
-                ? `A maioria preferiu pular (${tally.skip} ${tally.skip === 1 ? 'voto' : 'votos'}). Ninguém foi eliminado.`
-                : 'Houve empate no topo. Ninguém foi eliminado.'}
-            </p>
-          </div>
-        )}
       </PhaseShell>
     </>
+  )
+}
+
+/**
+ * Resultado da votação que não decidiu nada. (IMP-13)
+ *
+ * Mostra NOMES e contagem, não só "houve empate": a mesa precisa ver que 2 a 2
+ * aconteceu de verdade, senão parece que o voto se perdeu. Os votos já estão
+ * apurados neste ponto, então exibi-los não vaza nada.
+ */
+function VotingOutcome({
+  tally,
+  players,
+  round,
+}: {
+  tally: VoteTally | null
+  players: Player[]
+  round: number
+}) {
+  if (round <= 1 || !tally) return null
+
+  const pulou = tally.skip >= tally.top
+  const empatados = players
+    .filter((p) => tally.top > 0 && (tally.players[p.id] ?? 0) === tally.top)
+    .map((p) => `${p.name} ${tally.players[p.id]}`)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="border-warn/40 bg-warn/10 mb-5 rounded-2xl border p-4"
+    >
+      <p className="text-warn flex items-center gap-2 text-sm font-bold">
+        <Scale className="size-4 shrink-0" aria-hidden />
+        {pulou ? 'A mesa preferiu pular' : 'Deu empate na votação'}
+      </p>
+
+      <p className="mt-2 text-sm font-semibold text-pretty">
+        {pulou
+          ? `${tally.skip} ${tally.skip === 1 ? 'voto' : 'votos'} para pular.`
+          : empatados.join('  ·  ')}
+      </p>
+
+      <p className="text-muted-foreground mt-1 text-sm text-pretty">
+        Ninguém foi eliminado. Deem mais uma dica cada um e votem de novo.
+      </p>
+    </motion.div>
   )
 }
 

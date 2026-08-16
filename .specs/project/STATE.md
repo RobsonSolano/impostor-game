@@ -120,6 +120,18 @@ O WebSocket de HMR do Next falhava em loop no ambiente de validação e remontav
 
 **Lição geral:** Realtime é otimização de latência, não fonte de verdade. Toda tela que depende de push precisa de um caminho de recuperação — a pergunta certa é "e se este evento não chegar?", não "o evento vai chegar?".
 
+### Regra certa + silêncio = parece bug
+
+**Relato:** "você quebrou o jogo — abrimos votação, votamos, confirmamos e voltou pra nova rodada".
+
+**O banco estava certo** (sala `XMQQ`): ciclo 1 deu mamãe 2 × Heitorzinho 2, ciclo 2 deu exatamente o mesmo. Empate no topo não elimina ninguém — é a regra IMP-13, e ela existe por um bom motivo: eliminar no cara-ou-coroa arruinaria um jogo de dedução.
+
+**O defeito era de comunicação.** O aviso "Houve empate" ficava no FIM do conteúdo, depois do quadro de dicas — fora da tela no celular. O título só dizia "Rodada 4". Do ponto de vista da mesa: votaram, confirmaram, e a tela voltou ao começo sem explicação.
+
+**Correção:** o resultado sobe para o topo, com os NOMES e a contagem ("mamãe 2 · Heitorzinho 2"), e o subtítulo também explica para quem não rola a tela.
+
+**Lição geral:** num app multi-jogador, uma regra correta que não se explica é indistinguível de um bug — e o usuário não tem como saber a diferença. Toda transição que devolve o jogador ao estado anterior precisa dizer POR QUÊ, no lugar onde ele já está olhando.
+
 ## Ideias diferidas
 
 - Cron de limpeza de salas abandonadas → Milestone 2.
