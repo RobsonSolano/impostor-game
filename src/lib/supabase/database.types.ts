@@ -158,11 +158,13 @@ export type Database = {
           guess_deadline: string | null
           host_player_id: string | null
           id: string
+          is_public: boolean
           last_vote_tally: Json | null
           outcome: Database["public"]["Enums"]["game_outcome"] | null
           revealed_impostor_id: string | null
           revealed_word: string | null
           status: Database["public"]["Enums"]["room_status"]
+          title: string | null
           turn_deadline: string | null
           updated_at: string
           votes_cast: number
@@ -180,11 +182,13 @@ export type Database = {
           guess_deadline?: string | null
           host_player_id?: string | null
           id?: string
+          is_public?: boolean
           last_vote_tally?: Json | null
           outcome?: Database["public"]["Enums"]["game_outcome"] | null
           revealed_impostor_id?: string | null
           revealed_word?: string | null
           status?: Database["public"]["Enums"]["room_status"]
+          title?: string | null
           turn_deadline?: string | null
           updated_at?: string
           votes_cast?: number
@@ -202,11 +206,13 @@ export type Database = {
           guess_deadline?: string | null
           host_player_id?: string | null
           id?: string
+          is_public?: boolean
           last_vote_tally?: Json | null
           outcome?: Database["public"]["Enums"]["game_outcome"] | null
           revealed_impostor_id?: string | null
           revealed_word?: string | null
           status?: Database["public"]["Enums"]["room_status"]
+          title?: string | null
           turn_deadline?: string | null
           updated_at?: string
           votes_cast?: number
@@ -443,7 +449,10 @@ export type Database = {
       clue_turn_seconds: { Args: { p_turn_index: number }; Returns: number }
       clue_turns_done: { Args: { p_room_id: string }; Returns: boolean }
       confirm_word_seen: { Args: { p_room_id: string }; Returns: undefined }
-      create_room: { Args: { p_name: string }; Returns: Json }
+      create_room: {
+        Args: { p_is_public?: boolean; p_name: string; p_title?: string }
+        Returns: Json
+      }
       current_player: {
         Args: { p_room_id: string }
         Returns: {
@@ -477,6 +486,7 @@ export type Database = {
         Returns: undefined
       }
       gen_room_code: { Args: never; Returns: string }
+      has_profanity: { Args: { p_text: string }; Returns: boolean }
       impostor_weight: {
         Args: { p_player_id: string; p_room_id: string; p_round_number: number }
         Returns: number
@@ -490,6 +500,16 @@ export type Database = {
         Returns: undefined
       }
       leave_room: { Args: { p_room_id: string }; Returns: undefined }
+      list_public_rooms: {
+        Args: { p_search?: string }
+        Returns: {
+          code: string
+          created_at: string
+          host_name: string
+          players: number
+          title: string
+        }[]
+      }
       next_clue_round: { Args: { p_room_id: string }; Returns: undefined }
       normalize_word: { Args: { p_word: string }; Returns: string }
       open_voting: { Args: { p_room_id: string }; Returns: undefined }
