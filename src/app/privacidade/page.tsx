@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import Link from 'next/link'
 
 /**
@@ -21,10 +21,39 @@ const EMAIL_CONTATO = 'rsolanoodev@gmail.com'
 /** Data da última revisão do texto, mostrada ao usuário e exigida pela Play. */
 const ATUALIZADO_EM = '4 de setembro de 2026'
 
+/**
+ * O `variant="link"` do Button não serve aqui: ele carrega altura e padding de
+ * botão, e estes links são inline no meio de parágrafo.
+ */
+const CLASSE_LINK = 'text-primary underline underline-offset-4'
+
+/** Tipografia de corpo. Fora de `Secao` só o parágrafo de abertura a usa. */
+const CLASSE_CORPO = 'text-foreground/85 leading-relaxed'
+
+/**
+ * O layout fixa `maximumScale: 1` porque, no jogo, pinçar durante a revelação do
+ * card atrapalha. Aqui é o contrário: são ~190 linhas de texto legal e impedir o
+ * zoom é barreira de acessibilidade sem nada em troca. Página sobrescreve; o
+ * jogo continua como estava.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+}
+
 export const metadata: Metadata = {
-  title: 'Política de Privacidade — Impostor',
+  title: 'Política de Privacidade',
   description:
     'Como o jogo Impostor trata os dados de quem joga: sessão anônima, apelido, dicas, votos e anúncios.',
+}
+
+/** O e-mail aparece três vezes no texto; o estilo e o `mailto:` vivem num lugar só. */
+function LinkContato() {
+  return (
+    <a href={`mailto:${EMAIL_CONTATO}`} className={CLASSE_LINK}>
+      {EMAIL_CONTATO}
+    </a>
+  )
 }
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
@@ -33,17 +62,29 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
       <h2 className="font-heading text-primary text-xl font-semibold tracking-tight">
         {titulo}
       </h2>
-      <div className="text-foreground/85 mt-3 space-y-3 leading-relaxed">{children}</div>
+      <div className={`mt-3 space-y-3 ${CLASSE_CORPO}`}>{children}</div>
     </section>
   )
 }
 
 export default function PrivacidadePage() {
+  // `select-text` porque o <body> é `select-none` (long-press do card secreto):
+  // numa política, a ação principal é justamente copiar o e-mail de contato.
+  //
+  // `max-w-2xl` e não o `APP_COLUMN` do repo: os 448px daquele foram calibrados
+  // para botão primário e lista de jogadores, e são estreitos demais para prosa.
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12 sm:py-16">
+    <main className="pt-safe mx-auto w-full max-w-2xl px-6 py-12 select-text sm:py-16">
+      {/*
+        `prefetch={false}`: por padrão o Link baixa a rota inteira de `/` (+124 KB
+        gzip — a home é client component com `motion`). Esta é uma folha jurídica
+        que se chega pela ficha da Play e de onde quase ninguém navega para o
+        jogo; não há ganho de SPA que pague esse download.
+      */}
       <Link
         href="/"
-        className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+        prefetch={false}
+        className="text-muted-foreground touch-target hover:text-foreground inline-flex items-center text-sm transition-colors"
       >
         ← Voltar ao jogo
       </Link>
@@ -56,7 +97,7 @@ export default function PrivacidadePage() {
         Atualizada em {ATUALIZADO_EM}.
       </p>
 
-      <p className="text-foreground/85 mt-8 leading-relaxed">
+      <p className={`mt-8 ${CLASSE_CORPO}`}>
         O Impostor é um jogo de mesa. Ele não pede cadastro, e-mail, senha nem login
         social — abre e joga. Ainda assim, alguma coisa precisa trafegar para que
         vários celulares participem da mesma partida, e esta página diz exatamente o
@@ -67,14 +108,7 @@ export default function PrivacidadePage() {
         <p>
           O aplicativo é mantido por Robson Solano, desenvolvedor independente. Para
           qualquer assunto tratado aqui — inclusive pedido de exclusão de dados — o
-          contato é{' '}
-          <a
-            href={`mailto:${EMAIL_CONTATO}`}
-            className="text-primary underline underline-offset-4"
-          >
-            {EMAIL_CONTATO}
-          </a>
-          .
+          contato é <LinkContato />.
         </p>
       </Secao>
 
@@ -128,7 +162,7 @@ export default function PrivacidadePage() {
             href="https://policies.google.com/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary underline underline-offset-4"
+            className={CLASSE_LINK}
           >
             policies.google.com/privacy
           </a>
@@ -169,14 +203,8 @@ export default function PrivacidadePage() {
         </p>
         <p>
           Se ainda assim você quiser que os registros associados ao seu aparelho sejam
-          apagados, escreva para{' '}
-          <a
-            href={`mailto:${EMAIL_CONTATO}`}
-            className="text-primary underline underline-offset-4"
-          >
-            {EMAIL_CONTATO}
-          </a>{' '}
-          informando o código da sala e o apelido usado, e a exclusão é feita.
+          apagados, escreva para <LinkContato /> informando o código da sala e o apelido
+          usado, e a exclusão é feita.
         </p>
       </Secao>
 
@@ -200,9 +228,9 @@ export default function PrivacidadePage() {
       <Secao titulo="Seus direitos">
         <p>
           Pela Lei Geral de Proteção de Dados (LGPD, Lei 13.709/2018), você pode
-          solicitar confirmação de tratamento, acesso, correção, anonimização, portabilidade
-          ou exclusão dos seus dados, e revogar consentimento. Basta escrever para o
-          e-mail de contato — respondemos no prazo legal.
+          solicitar confirmação de tratamento, acesso, correção, anonimização,
+          portabilidade ou exclusão dos seus dados, e revogar consentimento. Basta
+          escrever para o e-mail de contato — respondemos no prazo legal.
         </p>
       </Secao>
 
@@ -215,13 +243,7 @@ export default function PrivacidadePage() {
 
       <hr className="border-border/60 mt-12" />
       <p className="text-muted-foreground mt-6 text-sm">
-        Dúvidas sobre esta política:{' '}
-        <a
-          href={`mailto:${EMAIL_CONTATO}`}
-          className="text-primary underline underline-offset-4"
-        >
-          {EMAIL_CONTATO}
-        </a>
+        Dúvidas sobre esta política: <LinkContato />
       </p>
     </main>
   )

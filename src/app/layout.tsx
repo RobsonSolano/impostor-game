@@ -13,7 +13,13 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Jogo do Impostor',
+  // `template` para que cada página nova declare só o próprio nome e a marca
+  // entre sozinha. Sem ele, toda rota recompõe a marca à mão e um rename vira
+  // grep em arquivos de página.
+  title: {
+    default: 'Jogo do Impostor',
+    template: '%s — Jogo do Impostor',
+  },
   description:
     'Todos recebem a mesma palavra secreta. Menos um. Descubra o impostor antes que ele engane a mesa.',
 }
