@@ -49,3 +49,6 @@ supabase/.branches/
 
 # Artefatos do Playwright MCP (screenshots/snapshots de validação)
 .playwright-mcp/
+
+# Handoff de sessao (temporario, nunca versionado)
+context-tmp.md
