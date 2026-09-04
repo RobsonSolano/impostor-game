@@ -74,11 +74,24 @@ Lição geral: quando a regra "mais justa" reduz o conjunto de suspeitos, ela es
 
 ## Blockers
 
-### 🔴 Credenciais do Supabase pendentes
+Nenhum aberto.
 
-Dev está criando o projeto Supabase (confirmado em 2026-07-31). Migrations e seed ficam versionados em `supabase/migrations/`; validação roda contra o Supabase local (Docker). Ao provisionar o remoto, preencher `.env.local` e rodar `npx supabase db push`.
+### ✅ 2026-09-04 — Banco reprovisionado (o projeto anterior deixou de existir)
 
-**Ação manual obrigatória no dashboard:** habilitar *Anonymous sign-ins* em Authentication → Sign In / Providers. Sem isso, `signInAnonymously()` retorna 422 e ninguém entra em sala.
+O projeto Supabase de teste (`wpmkvthjthwgbfandeif`) **deixou de existir** — o host passou a devolver `NXDOMAIN`, provável pausa/remoção por inatividade no plano gratuito. Sintoma no cliente: `signInAnonymously()` falha com erro de rede (`UnknownHostException`), que na tela parece queda de conexão e não banco inexistente.
+
+Projeto novo: **`bbtsqjxcmlymwxcqvrmo`** (nome "Impostor", região us-west-2).
+
+Feito em 2026-09-04:
+
+- `supabase link` + `supabase db push` — as 6 migrations aplicadas do zero, incluindo a semeadura das palavras (que é migration, então vai junto).
+- `supabase config push` — é isto que habilita *Anonymous sign-ins* sem passar pelo dashboard, porque o flag está versionado em `config.toml` (`enable_anonymous_sign_ins = true`). Confirmado com um `POST /auth/v1/signup` real: volta JWT com `role: authenticated` e `amr: [{method: "anonymous"}]`.
+- `.env.local` e as variáveis da Vercel (`NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`, nos três ambientes) apontando para o projeto novo.
+- `seed.sql` **não** subiu, e isso é o comportamento correto: ele fabrica usuários em `auth.users` para teste local e não pode existir em produção. O `db push` só envia `migrations/`.
+
+Verificado contra o banco novo, por RPC real (três sessões anônimas): `create_room` → `join_room` ×2 → `start_game` funcionam; durante a partida `rooms.revealed_word` e `rooms.revealed_impostor_id` continuam `null` (o segredo não está lá — ver a primeira decisão deste documento); e cada jogador lê **uma** linha em `player_cards`, a própria. `rounds` e `votes` seguem sem grant para o cliente.
+
+**Lição:** projeto Supabase gratuito parado é apagado. Um `dig` no host do `.env` é o primeiro diagnóstico quando o login anônimo começa a falhar por "rede".
 
 ## Lições
 
